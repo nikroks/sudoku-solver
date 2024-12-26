@@ -3,7 +3,6 @@
 #include <vector>
 #include <map>
 #include <functional>
-#include <list>
 
 using namespace std;
 
@@ -16,7 +15,6 @@ struct assumption_struct {
 
 class operations {
     public:
-    // std::vector<std::function<bool()> > operations_list;
     std::vector<std::function<void()> > operations_list;
 
     void execute() {
@@ -463,7 +461,7 @@ bool assume_value_to_solve_sudoku (int number_of_assumed_values) {
 
             for (int i=0; i<result.possible_assumption.size(); i++) {
 
-                cout << "Assigning " << result.possible_assumption[i] << " at (" << result.x << ", " << result.y << ") through assumption" << endl;
+                cout << "Assuming value " << result.possible_assumption[i] << " at (" << result.x << ", " << result.y << ")" << endl;
 
                 ops = handle_assignment_dependencies(result.x, result.y, result.possible_assumption[i]);
 
@@ -482,8 +480,6 @@ bool assume_value_to_solve_sudoku (int number_of_assumed_values) {
         }
     } else {
         // Sudoku solved
-
-        cout << endl << endl << "Number of assumptions is: " << number_of_assumed_values << endl << endl;
         return true;
     }
 }
