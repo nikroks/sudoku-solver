@@ -1,7 +1,9 @@
 # sudoku-solver
 
-Providing Sudoku input: Update the variable "input" in sudoku_solver.cpp file with the sudoku puzzle. Provide all inputs in character format. Use '-' for blank spaces.
+Providing Sudoku input: Update the variable "input" in sudoku_solver.cpp file with the sudoku puzzle. Provide all inputs in character format. Use '-' for blank spaces. <br>
 
-make clean
-make build
+
+Execution commands: <br>
+make clean <br>
+make build <br>
 make run
