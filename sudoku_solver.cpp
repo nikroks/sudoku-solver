@@ -15,12 +15,28 @@ struct assumption_struct {
 
 class operations {
     public:
-    std::vector<std::function<void()> > operations_list;
+    vector<function<void()> > operations_list;
+
+    // operations_list vector is continuously appended with lambda functions. 
+    // While reverting it, I want to revert all the operations from a particular index of operations list.
+    // I am storing the list of indexes in this vector. 
+    vector<int> position;
 
     void execute() {
-        for(auto it = operations_list.begin() ; it != operations_list.end(); it++) {
+
+        for(auto it = operations_list.begin() + position[position.size() - 1] ; it != operations_list.end(); it++) {
             (*it)();
         }
+
+        while (operations_list.size() > position[position.size() - 1]) {
+            operations_list.pop_back();
+        }
+
+        position.pop_back();
+    }
+
+    void mark_index() {
+        position.push_back(operations_list.size());
     }
 };
 
@@ -62,6 +78,7 @@ block block_array[9][9] = {{block(0, 0), block(0, 1), block(0, 2), block(0, 3), 
                            {block(6, 0), block(6, 1), block(6, 2), block(6, 3), block(6, 4), block(6, 5), block(6, 6), block(6, 7), block(6, 8)}, 
                            {block(7, 0), block(7, 1), block(7, 2), block(7, 3), block(7, 4), block(7, 5), block(7, 6), block(7, 7), block(7, 8)}, 
                            {block(8, 0), block(8, 1), block(8, 2), block(8, 3), block(8, 4), block(8, 5), block(8, 6), block(8, 7), block(8, 8)}};
+operations ops;
 
 bool is_valid (int x, int y, int value) {
     block* block_ptr = &block_array[x][y];
@@ -184,34 +201,33 @@ void initialise(char a[9][9]) {
     return;
 }
 
-operations handle_assignment_dependencies (int x, int y, int value) {
+void handle_assignment_dependencies (int x, int y, int value) {
 
-    operations ops;
     block* root = block_array[x][y].square_block_start;
 
-    ops.operations_list.push_back([&](){block_array[x][y].value = 0;});
+    ops.operations_list.push_back([=](){block_array[x][y].value = 0;});
     block_array[x][y].value = value;
 
     // Clear possible_values vectors for (x, y)
     while(block_array[x][y].possible_values.size() > 0) {
-        auto temp = block_array[x][y].possible_values[block_array[x][y].possible_values.size() - 1];
-        ops.operations_list.push_back([&](){block_array[x][y].possible_values.push_back(temp);});
-        block_array[x][y].possible_values.pop_back();
+        auto temp = block_array[x][y].possible_values[0];
+        ops.operations_list.push_back([=](){block_array[x][y].possible_values.push_back(temp);});
+        block_array[x][y].possible_values.erase(block_array[x][y].possible_values.begin());
     }
 
     // Clear row_map for (x, y)
     auto temp_row_map = block_array[x][y].row_map;
-    ops.operations_list.push_back([&](){block_array[x][y].row_map = temp_row_map;});
+    ops.operations_list.push_back([=](){block_array[x][y].row_map = temp_row_map;});
     block_array[x][y].row_map.clear();
 
     // Clear column_map for (x, y)
     auto temp_column_map = block_array[x][y].column_map;
-    ops.operations_list.push_back([&](){block_array[x][y].column_map = temp_column_map;});
+    ops.operations_list.push_back([=](){block_array[x][y].column_map = temp_column_map;});
     block_array[x][y].column_map.clear();
 
     // Clear inner_square_block_map for (x, y)
     auto temp_inner_square_block_map = block_array[x][y].inner_square_block_map;
-    ops.operations_list.push_back([&](){block_array[x][y].inner_square_block_map = temp_inner_square_block_map;});
+    ops.operations_list.push_back([=](){block_array[x][y].inner_square_block_map = temp_inner_square_block_map;});
     block_array[x][y].inner_square_block_map.clear();
 
 
@@ -222,19 +238,19 @@ operations handle_assignment_dependencies (int x, int y, int value) {
             auto it = find(block_array[i][y].possible_values.begin(), block_array[i][y].possible_values.end(), value);
             if(it != block_array[i][y].possible_values.end()) {
 
-                ops.operations_list.push_back([&](){block_array[i][y].possible_values.push_back(*it);});
+                ops.operations_list.push_back([=](){block_array[i][y].possible_values.push_back(*it);});
                 block_array[i][y].possible_values.erase(it);
                 
                 auto temp_row_map = block_array[i][y].row_map[value];
-                ops.operations_list.push_back([&](){block_array[i][y].row_map[value] = temp_row_map;});
+                ops.operations_list.push_back([=](){block_array[i][y].row_map[value] = temp_row_map;});
                 block_array[i][y].row_map.erase(value);
                 
                 auto temp_column_map = block_array[i][y].column_map[value];
-                ops.operations_list.push_back([&](){block_array[i][y].column_map[value] = temp_column_map;});
+                ops.operations_list.push_back([=](){block_array[i][y].column_map[value] = temp_column_map;});
                 block_array[i][y].column_map.erase(value);
                 
                 auto temp_inner_square_block_map = block_array[i][y].inner_square_block_map[value];
-                ops.operations_list.push_back([&](){block_array[i][y].inner_square_block_map[value] = temp_inner_square_block_map;});
+                ops.operations_list.push_back([=](){block_array[i][y].inner_square_block_map[value] = temp_inner_square_block_map;});
                 block_array[i][y].inner_square_block_map.erase(value);
 
                 block* inner_root = block_array[i][y].square_block_start;
@@ -263,19 +279,19 @@ operations handle_assignment_dependencies (int x, int y, int value) {
             auto it = find(block_array[x][i].possible_values.begin(), block_array[x][i].possible_values.end(), value);
             if(it != block_array[x][i].possible_values.end()) {
 
-                ops.operations_list.push_back([&](){block_array[x][i].possible_values.push_back(*it);});
+                ops.operations_list.push_back([=](){block_array[x][i].possible_values.push_back(*it);});
                 block_array[x][i].possible_values.erase(it);
 
                 auto temp_row_map = block_array[x][i].row_map[value];
-                ops.operations_list.push_back([&](){block_array[x][i].row_map[value] = temp_row_map;});
+                ops.operations_list.push_back([=](){block_array[x][i].row_map[value] = temp_row_map;});
                 block_array[x][i].row_map.erase(value);
 
                 auto temp_column_map = block_array[x][i].column_map[value];
-                ops.operations_list.push_back([&](){block_array[x][i].column_map[value] = temp_column_map;});
+                ops.operations_list.push_back([=](){block_array[x][i].column_map[value] = temp_column_map;});
                 block_array[x][i].column_map.erase(value);
 
                 auto temp_inner_square_block_map = block_array[x][i].inner_square_block_map[value];
-                ops.operations_list.push_back([&](){block_array[x][i].inner_square_block_map[value] = temp_inner_square_block_map;});
+                ops.operations_list.push_back([=](){block_array[x][i].inner_square_block_map[value] = temp_inner_square_block_map;});
                 block_array[x][i].inner_square_block_map.erase(value);
 
                 block* inner_root = block_array[x][i].square_block_start;
@@ -314,19 +330,19 @@ operations handle_assignment_dependencies (int x, int y, int value) {
             auto it = find(block_array[root->x_pos + i][root->y_pos + j].possible_values.begin(), block_array[root->x_pos + i][root->y_pos + j].possible_values.end(), value);
             if(it != block_array[root->x_pos + i][root->y_pos + j].possible_values.end()) {
 
-                ops.operations_list.push_back([&](){block_array[root->x_pos + i][root->y_pos + j].possible_values.push_back(*it);});
+                ops.operations_list.push_back([=](){block_array[root->x_pos + i][root->y_pos + j].possible_values.push_back(*it);});
                 block_array[root->x_pos + i][root->y_pos + j].row_map.erase(*it);
 
                 auto temp_row_map = block_array[root->x_pos + i][root->y_pos + j].row_map[value];
-                ops.operations_list.push_back([&](){block_array[root->x_pos + i][root->y_pos + j].row_map[value] = temp_row_map;});
+                ops.operations_list.push_back([=](){block_array[root->x_pos + i][root->y_pos + j].row_map[value] = temp_row_map;});
                 block_array[root->x_pos + i][root->y_pos + j].column_map.erase(*it);
 
                 auto temp_column_map = block_array[root->x_pos + i][root->y_pos + j].column_map[value];
-                ops.operations_list.push_back([&](){block_array[root->x_pos + i][root->y_pos + j].column_map[value] = temp_column_map;});
+                ops.operations_list.push_back([=](){block_array[root->x_pos + i][root->y_pos + j].column_map[value] = temp_column_map;});
                 block_array[root->x_pos + i][root->y_pos + j].inner_square_block_map.erase(*it);
 
                 auto temp_inner_square_block_map = block_array[root->x_pos + i][root->y_pos + j].inner_square_block_map[value];
-                ops.operations_list.push_back([&](){block_array[root->x_pos + i][root->y_pos + j].inner_square_block_map[value] = temp_inner_square_block_map;});
+                ops.operations_list.push_back([=](){block_array[root->x_pos + i][root->y_pos + j].inner_square_block_map[value] = temp_inner_square_block_map;});
                 block_array[root->x_pos + i][root->y_pos + j].possible_values.erase(it);
             }
 
@@ -342,8 +358,6 @@ operations handle_assignment_dependencies (int x, int y, int value) {
             }
         }
     }
-
-    return ops;
 }
 
 void assign_possible_value () {
@@ -447,7 +461,6 @@ bool identify_if_sudoku_solved(assumption_struct& result) {
 bool assume_value_to_solve_sudoku (int number_of_assumed_values) {
     bool solved;
     assumption_struct result;
-    operations ops;
 
     assign_possible_value();
 
@@ -463,7 +476,11 @@ bool assume_value_to_solve_sudoku (int number_of_assumed_values) {
 
                 cout << "Assuming value " << result.possible_assumption[i] << " at (" << result.x << ", " << result.y << ")" << endl;
 
-                ops = handle_assignment_dependencies(result.x, result.y, result.possible_assumption[i]);
+                cout << "Sudoku table before assuming value" << endl;
+                print_sudoku_table();
+
+                ops.mark_index();
+                handle_assignment_dependencies(result.x, result.y, result.possible_assumption[i]);
 
                 solved = assume_value_to_solve_sudoku(number_of_assumed_values + 1);
 
@@ -473,6 +490,9 @@ bool assume_value_to_solve_sudoku (int number_of_assumed_values) {
                     // The assigned value through assumption is incorrect. Thus, all the operations need to be revereted.
                     cout << "Assumed value of " << result.possible_assumption[i] << " at (" << result.x << ", " << result.y << ") is incorrect" << endl;
                     ops.execute();
+                    cout << "Sudoku table after reverting value" << endl;
+                    print_sudoku_table();
+                    cout << "Print complete" << endl;
                 }
             }
 
@@ -487,24 +507,35 @@ bool assume_value_to_solve_sudoku (int number_of_assumed_values) {
 int main() {
 
     // Give the input sudoku here.
-    char input[9][9] = {{'-', '-', '-', '1', '-', '6', '-', '-', '7'},
-                        {'3', '-', '4', '-', '-', '9', '-', '-', '-'},
-                        {'1', '-', '-', '-', '5', '-', '8', '-', '-'},
-                        {'8', '-', '-', '4', '-', '-', '6', '-', '9'},
-                        {'-', '-', '-', '-', '-', '-', '-', '-', '-'},
-                        {'6', '-', '1', '-', '-', '8', '-', '-', '4'},
-                        {'-', '-', '2', '-', '1', '-', '-', '-', '8'},
-                        {'-', '-', '-', '3', '-', '-', '5', '-', '6'},
-                        {'5', '-', '-', '6', '-', '4', '-', '-', '-'}};
+    // char input[9][9] = {{'-', '-', '-', '1', '-', '6', '-', '-', '7'},
+    //                     {'3', '-', '4', '-', '-', '9', '-', '-', '-'},
+    //                     {'1', '-', '-', '-', '5', '-', '8', '-', '-'},
+    //                     {'8', '-', '-', '4', '-', '-', '6', '-', '9'},
+    //                     {'-', '-', '-', '-', '-', '-', '-', '-', '-'},
+    //                     {'6', '-', '1', '-', '-', '8', '-', '-', '4'},
+    //                     {'-', '-', '2', '-', '1', '-', '-', '-', '8'},
+    //                     {'-', '-', '-', '3', '-', '-', '5', '-', '6'},
+    //                     {'5', '-', '-', '6', '-', '4', '-', '-', '-'}};
+    char input[9][9] = {{'-', '-', '-', '-', '-', '5', '9', '4', '-'},
+                        {'4', '5', '-', '2', '-', '3', '-', '6', '-'},
+                        {'6', '-', '-', '-', '7', '-', '-', '-', '-'},
+                        {'8', '2', '-', '-', '-', '-', '-', '3', '-'},
+                        {'-', '-', '5', '-', '-', '-', '1', '-', '-'},
+                        {'-', '9', '-', '-', '-', '-', '-', '8', '2'},
+                        {'-', '-', '-', '-', '8', '-', '-', '-', '6'},
+                        {'-', '6', '-', '4', '-', '1', '-', '9', '8'},
+                        {'-', '7', '8', '9', '-', '-', '-', '-', '-'}};
     initialise(input);
 
     assign_possible_value();
 
+    cout << "Completing possivle assignment. This is the output table." << endl;
     print_sudoku_table();
 
     assumption_struct result;
 
     if (! identify_if_sudoku_solved(result)) {
+        cout << "Sudoku is unsolved. Will begin assuming values" << endl;
         assume_value_to_solve_sudoku(0);
     }
 
